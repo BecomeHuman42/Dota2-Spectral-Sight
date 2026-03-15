@@ -1,10 +1,16 @@
 import requests
+import os
+from dotenv import load_dotenv
 
-class OpenDotaClient:
-    BASE_URL = "https://api.opendota.com/api"
+load_dotenv()
 
-    @staticmethod
-    def get_player_info(account_id):
-        url = f"{OpenDotaClient.BASE_URL}/players/{account_id}"
-        response = requests.get(url)
-        return response.json() if response.status_code == 200 else None
+BASE_URL = "https://api.opendota.com/api"
+
+id = os.getenv('DOTA_ACCOUNT_ID')
+URL = BASE_URL + "/players/" + id
+r = requests.get(URL)
+data = r.json()
+account_id = data['profile']['account_id']
+steamid = data['profile']['steamid']
+print(account_id)
+print(steamid)
