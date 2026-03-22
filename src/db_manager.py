@@ -20,11 +20,12 @@ def fetch_pro_players():
     simplify_list = []
     for player in raw_pro_players:
         p_avatar = player.get('avatarmedium')
+        p_steamid = player.get('steamid')
         p_profileurl = player.get('profileurl')
         p_personaname = player.get('personaname')
         p_name = player.get('name')
         p_team_name = player.get('team_name')
-        simplify_pro_player = dict(zip(['avatar', 'profileurl', 'personaname','name','team_name'],[p_avatar,p_profileurl,p_personaname,p_name,p_team_name]))
+        simplify_pro_player = dict(zip(['avatar','steamid','profileurl', 'personaname','name','team_name'],[p_avatar,p_steamid,p_profileurl,p_personaname,p_name,p_team_name]))
         simplify_list.append(simplify_pro_player)
     with open('./data/pro_players.json','w', encoding="utf-8") as f:
         json.dump(simplify_list, f)
