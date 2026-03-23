@@ -2,6 +2,7 @@ import json
 import os
 import time
 import requests
+import datetime
 
 CACHE_TTL_SECONDS = 7 * 24 * 3600
 CACHE_PATH = "./data/pro_players.json"
@@ -11,43 +12,83 @@ def ensure_data_fresh():
     Ensure local pro player cache is available and fresh.
 
     If ./data/pro_players.json does not exist, or if it is older than 7 days,
-    fetch fresh data from the OpenDota API and update the local file.
+    use fetch_pro_players() to fetch fresh data.
     
     Args:
-        None
+        None.
 
     Returns:
-        None
+        None.
     """
     if os.path.exists(CACHE_PATH):
-        file_stats = os.stat(CACHE_PATH)
-        current_time = time.time()
-        file_modified_time = file_stats.st_mtime
-        if current_time - file_modified_time > CACHE_TTL_SECONDS:
+        cache_file_stats = os.stat(CACHE_PATH)
+        current_timestamp = time.time()
+        cache_last_modified_timestamp = cache_file_stats.st_mtime
+        if current_timestamp - cache_last_modified_timestamp > CACHE_TTL_SECONDS:
             fetch_pro_players()
     else:
         fetch_pro_players()
 
 def fetch_pro_players():
-    url = f"https://api.opendota.com/api/proPlayers"
-    r = requests.get(url)
-    raw_pro_players = r.json()
-    simplify_list = []
-    for player in raw_pro_players:
-        p_avatar = player.get('avatarmedium')
-        p_steamid = player.get('steamid')
-        p_profileurl = player.get('profileurl')
-        p_personaname = player.get('personaname')
-        p_name = player.get('name')
-        p_team_name = player.get('team_name')
-        simplify_pro_player = dict(zip(['avatar','steamid','profileurl', 'personaname','name','team_name'],[p_avatar,p_steamid,p_profileurl,p_personaname,p_name,p_team_name]))
-        simplify_list.append(simplify_pro_player)
-    with open(CACHE_PATH,'w', encoding="utf-8") as f:
-        json.dump(simplify_list, f)
-    return simplify_list
+    """
+    Fetch pro player data from OpenDota API and save it locally.
+    
+    Args:
+        None.
+
+    Returns:
+        A list of simplified pro player data with the following structure:
+    [
+        {
+            "avatar": "string",
+            "steamid": 0,
+            "profileurl": "string",
+            "personaname": "string",
+            "name": "string",
+            "team_name": "string",
+        },
+    ]
+    """
+    url = "https://api.opendota.com/api/proPlayers"
+    response = requests.get(url, timeout=15)
+    pro_players_payload = response.json()
+    simplified_pro_players_list = []
+    for raw_player in pro_players_payload:
+        simplified_player = {
+            "avatar": raw_player.get("avatarmedium"),
+            "steamid": raw_player.get("steamid"),
+            "profileurl": raw_player.get("profileurl"),
+            "personaname": raw_player.get("personaname"),
+            "name": raw_player.get("name"),
+            "team_name": raw_player.get("team_name"),
+        }
+        simplified_pro_players_list.append(simplified_player)
+
+    with open(CACHE_PATH, "w", encoding="utf-8") as cache_file:
+        json.dump(simplified_pro_players_list, cache_file)
+
+    return simplified_pro_players_list
+
+def get_cache_last_modified_datetime():
+    """
+    Get the last modified datetime of the local pro player cache file.
+
+    Args:
+        None.
+
+    Returns:
+        datetime.datetime or None.
+    """
+    if os.path.exists(CACHE_PATH):
+        cache_file_stats = os.stat(CACHE_PATH)
+        cache_last_modified_timestamp = cache_file_stats.st_mtime
+        last_modified_dt = datetime.datetime.fromtimestamp(cache_last_modified_timestamp)
+        return last_modified_dt
 
 def main():
     fetch_pro_players()
+    time = get_cache_last_modified_datetime()
+    print(f'Current date of data: {time}')
     
 if __name__ == "__main__":
     main()
