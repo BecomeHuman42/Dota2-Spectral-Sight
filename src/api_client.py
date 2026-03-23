@@ -4,15 +4,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-my_key = os.getenv('STEAM_KEY')
-DOTA_ID = os.getenv('DOTA_ACCOUNT_ID')
+STEAM_API_KEY = os.getenv('STEAM_KEY')
+DEFAULT_DOTA_ACCOUNT_ID = os.getenv('DOTA_ACCOUNT_ID')
 
-def fetch_player(target_player_id = None):
+def fetch_player_profile(target_dota_account_id=None):
     """
     Use OpenDota api and Dota2 account id to get target's basic information
 
     Args:
-        target_player_id (int): target player's Dota2 Account id
+        target_dota_account_id (int): target player's Dota2 account id
 
     Returns:
         dict: A dictionary of player profile, with the following structure:
@@ -45,18 +45,18 @@ def fetch_player(target_player_id = None):
             }
         }
     """
-    id = target_player_id if target_player_id is not None else DOTA_ID
+    account_id = target_dota_account_id if target_dota_account_id is not None else DEFAULT_DOTA_ACCOUNT_ID
     try:
-        url = f"https://api.opendota.com/api/players/{id}"
-        r = requests.get(url)
-        return r.json()
-    except Exception as e:
-        print(f"Failed to fetch player data:{e}")
+        url = f"https://api.opendota.com/api/players/{account_id}"
+        response = requests.get(url)
+        return response.json()
+    except Exception as error:
+        print(f"Failed to fetch player data:{error}")
         return None
 
-def get_steam_id(player_profile):
+def get_player_steam_id(player_profile):
     """
-    Use fetch_player() to get the dictionary of player, then return the target's SteamID.
+    Use fetch_player_profile() to get the dictionary of player, then return the target's SteamID.
 
     Args:
         player_profile (dict): target player's Dota2 profile.
@@ -66,9 +66,9 @@ def get_steam_id(player_profile):
     """
     return player_profile.get('profile').get('steamid')
 
-def get_persona_name(player_profile):
+def get_player_persona_name(player_profile):
     """
-    Use fetch_player() to get the dictionary of player, then return the target's steam personaname.
+    Use fetch_player_profile() to get the dictionary of player, then return the target's steam personaname.
 
     Args:
         player_profile (dict): target player's Dota2 profile.
@@ -78,13 +78,13 @@ def get_persona_name(player_profile):
     """
     return player_profile.get('profile').get('personaname')
 
-def get_friend_list(steam_id, user_key = None):
+def fetch_friend_list(steam_id, steam_api_key=None):
     """
     Use Steam Web API to get the friend list of a player.
 
     Args:
         steam_id (int): 64bit SteamID.
-        user_key (str): Steam Web API key.
+        steam_api_key (str): Steam Web API key.
 
     Returns:
         dict or None: Returns None if the target player's profile is private.
@@ -101,17 +101,17 @@ def get_friend_list(steam_id, user_key = None):
             }
         }
     """
-    key = user_key if user_key is not None else my_key
-    url = f"https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={key}&steamid={steam_id}&relationship=friend"
-    r = requests.get(url)
-    data = r.json()
+    api_key = steam_api_key if steam_api_key is not None else STEAM_API_KEY
+    url = f"https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={api_key}&steamid={steam_id}&relationship=friend"
+    response = requests.get(url)
+    data = response.json()
     if not data:
         print("Targer player's Steam Community profile visibility isn't Public")
         return None
     else:
         return data
     
-def display_friend_list_info(friend_list):
+def display_top_friend_list_info(friend_list):
     """
     Display top 10 friend list.
 
@@ -123,45 +123,45 @@ def display_friend_list_info(friend_list):
     if not friend_list:
         pass
     else:
-        ff = friend_list.get('friendslist').get('friends')
-        id_list = []
+        friends = friend_list.get('friendslist').get('friends')
+        friend_steam_ids = []
         for i in range(10):
-            steam_id = ff[i].get('steamid')
-            id_list.append(steam_id)
-        name_id_list = transform_steamid_to_name(id_list)
-        for player in name_id_list:
-            print(f'Friend name:  {player.get('personaname')}')
-            print(f'Friend id:    {player.get('id')}')
+            steam_id = friends[i].get('steamid')
+            friend_steam_ids.append(steam_id)
+        friend_profiles = fetch_player_summaries_by_steam_ids(friend_steam_ids)
+        for player in friend_profiles:
+            print(f"Friend name:  {player.get('personaname')}")
+            print(f"Friend id:    {player.get('id')}")
             print('------------------------------')
 
-def transform_steamid_to_name(steam_id, user_key = None):
+def fetch_player_summaries_by_steam_ids(steam_ids, steam_api_key=None):
     """
     Use Steam Web API to transform steam id to name.
 
     Args:
-        steam_id (list): list of 64 bit Steam IDs.
-        user_key (str): Steam Web API key.
+        steam_ids (list): list of 64 bit Steam IDs.
+        steam_api_key (str): Steam Web API key.
 
     Returns:
         person_name(str): Target Steam Community name.
     """
-    key = user_key if user_key is not None else my_key
-    url = f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={key}&steamids={steam_id}"
-    r = requests.get(url).json()
-    list = r.get('response').get('players')
-    name_id_list = []
-    for player in list:
-        player_d = {'id':player.get('steamid'),'personaname':player.get('personaname')}
-        name_id_list.append(player_d) 
-    return name_id_list
+    api_key = steam_api_key if steam_api_key is not None else STEAM_API_KEY
+    url = f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steam_ids}"
+    response_json = requests.get(url).json()
+    players = response_json.get('response').get('players')
+    player_summaries = []
+    for player in players:
+        player_summary = {'id': player.get('steamid'), 'personaname': player.get('personaname')}
+        player_summaries.append(player_summary)
+    return player_summaries
 
 def main():
-    player_profile = fetch_player(DOTA_ID)
-    target_id = get_steam_id(player_profile)
-    personaname = get_persona_name(player_profile)
-    print(personaname)
-    friend_list = get_friend_list(target_id)
-    display_friend_list_info(friend_list)
+    player_profile = fetch_player_profile(DEFAULT_DOTA_ACCOUNT_ID)
+    player_steam_id = get_player_steam_id(player_profile)
+    persona_name = get_player_persona_name(player_profile)
+    print(persona_name)
+    friend_list = fetch_friend_list(player_steam_id)
+    display_top_friend_list_info(friend_list)
 
 if __name__ == "__main__":
     main()
