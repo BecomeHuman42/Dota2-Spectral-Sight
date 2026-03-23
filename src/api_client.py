@@ -94,6 +94,11 @@ def fetch_friend_list(steam_id, steam_api_key=None):
                         "steamid": "string",
                         "relationship": "friend",
                         "friend_since": int
+                    },
+                    {
+                        "steamid": "string",
+                        "relationship": "friend",
+                        "friend_since": int
                     }
                 ]
     """

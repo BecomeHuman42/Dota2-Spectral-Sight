@@ -31,30 +31,31 @@ def ensure_data_fresh():
 
 def fetch_pro_players():
     """
-    Fetch pro player data from OpenDota API and save it locally.
-    
+    Fetch pro player data from OpenDota API and cache it locally.
+
     Args:
         None.
 
     Returns:
-        A list of simplified pro player data with the following structure:
-    [
-        {
-            "avatar": "string",
-            "steamid": 0,
-            "profileurl": "string",
-            "personaname": "string",
-            "name": "string",
-            "team_name": "string",
-        },
-    ]
+        dict[int, dict]: Simplified pro player mapping.
+        Example:
+            {
+                123456789: {
+                    "avatar": "string",
+                    "steamid": 123456789,
+                    "profileurl": "string",
+                    "personaname": "string",
+                    "name": "string",
+                    "team_name": "string",
+                }
+            }
     """
     url = "https://api.opendota.com/api/proPlayers"
     response = requests.get(url, timeout=15)
     pro_players_payload = response.json()
-    simplified_pro_players_list = []
+    simplified_pro_players_dict = {}
     for raw_player in pro_players_payload:
-        simplified_player = {
+        simplified_player_info = {
             "avatar": raw_player.get("avatarmedium"),
             "steamid": raw_player.get("steamid"),
             "profileurl": raw_player.get("profileurl"),
@@ -62,12 +63,12 @@ def fetch_pro_players():
             "name": raw_player.get("name"),
             "team_name": raw_player.get("team_name"),
         }
-        simplified_pro_players_list.append(simplified_player)
+        simplified_pro_players_dict[raw_player.get("steamid")] = simplified_player_info
 
     with open(CACHE_PATH, "w", encoding="utf-8") as cache_file:
-        json.dump(simplified_pro_players_list, cache_file)
+        json.dump(simplified_pro_players_dict, cache_file)
 
-    return simplified_pro_players_list
+    return simplified_pro_players_dict
 
 def get_cache_last_modified_datetime():
     """
