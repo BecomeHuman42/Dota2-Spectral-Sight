@@ -62,7 +62,7 @@ def get_player_steam_id(player_profile):
         player_profile (dict): target player's Dota2 profile.
 
     Returns:
-        int: 64bit SteamID of the targer.
+        int: 64bit SteamID of the target.
     """
     return player_profile.get('profile').get('steamid')
 
@@ -87,29 +87,26 @@ def fetch_friend_list(steam_id, steam_api_key=None):
         steam_api_key (str): Steam Web API key.
 
     Returns:
-        dict or None: Returns None if the target player's profile is private.
-        Otherwise, returns a dictionary with the following structure:
-        {
-            "friendslist": {
-                "friends": [
+        list or None: Returns None if the target player's profile is private.
+        Otherwise, returns a list with the following structure:
+            "friends": [
                     {
                         "steamid": "string",
                         "relationship": "friend",
                         "friend_since": int
-                    },
+                    }
                 ]
-            }
-        }
     """
     api_key = steam_api_key if steam_api_key is not None else STEAM_API_KEY
     url = f"https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={api_key}&steamid={steam_id}&relationship=friend"
     response = requests.get(url)
     data = response.json()
     if not data:
-        print("Targer player's Steam Community profile visibility isn't Public")
+        print("Target player's Steam Community profile visibility isn't Public")
         return None
     else:
-        return data
+        friend_list = data.get('friendslist').get('friends')
+        return friend_list
     
 def display_top_friend_list_info(friend_list):
     """
@@ -123,10 +120,9 @@ def display_top_friend_list_info(friend_list):
     if not friend_list:
         pass
     else:
-        friends = friend_list.get('friendslist').get('friends')
         friend_steam_ids = []
         for i in range(10):
-            steam_id = friends[i].get('steamid')
+            steam_id = friend_list[i].get('steamid')
             friend_steam_ids.append(steam_id)
         friend_profiles = fetch_player_summaries_by_steam_ids(friend_steam_ids)
         for player in friend_profiles:

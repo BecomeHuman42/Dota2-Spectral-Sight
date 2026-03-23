@@ -1,38 +1,40 @@
 import os
-from api_client import fetch_friend_list, fetch_player_profile, display_player_info
-from db_manager import fetch_pro_players
+from api_client import fetch_player_profile, get_player_steam_id, fetch_friend_list
+from db_manager import fetch_pro_players, ensure_data_fresh
 from dotenv import load_dotenv
 
 load_dotenv()
-key = os.getenv('STEAM_KEY')
-pro_players = fetch_pro_players()
 test_id = os.getenv('AME_ID')
 
 def match_pro_player(target_id = None):
-    pro_friends = []
-    friend_list = fetch_friend_list(target_id, key)
-    print(type(friend_list))
-    fl = friend_list.get('friendslist').get('friends')
-    for friend in fl:
-            for pro in pro_players:
-                 if friend.get('steamid') == pro.get('steamid'):
-                    pro_friends.append(pro)
-                    break
-    return pro_friends
+    player_profile = fetch_player_profile(target_id)
+    player_steam_id = get_player_steam_id(player_profile)
+    friend_list = fetch_friend_list(player_steam_id)
+    ensure_data_fresh()
+    pro_list = fetch_pro_players()
+
+    pro_friend_list = []
+    for friend in friend_list:
+        friend_id = friend.get('steamid')
+        for pro in pro_list:
+            pro_id = pro.get('steamid')
+            if friend_id == pro_id:
+                pro_friend_list.append(pro)
+                break
+    
+    return pro_friend_list
 
 def show(pro_friends):
     for friend in pro_friends:
-        print("————————————————")
+        print("————————————————————————————————————————————————————————————————")
         print(friend.get('personaname'))
         print(friend.get('name'))
         print(friend.get('profileurl'))
         print(friend.get('team_name'))
 
 def main():
-    player = fetch_player_profile(test_id)
-    steam_id = display_player_info(player)
-    pro_friends = match_pro_player(steam_id)
-    show(pro_friends)
+    list = match_pro_player(test_id)
+    show(list)
 
 if __name__ == "__main__":
     main()
