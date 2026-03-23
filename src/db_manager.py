@@ -3,12 +3,27 @@ import os
 import time
 import requests
 
-def check_data():
-    if os.path.exists("./data/pro_players.json"):
-        stat = os.stat("./data/pro_players.json")
-        now = time.time()
-        file_mtime = stat.st_mtime
-        if(now - file_mtime > 7*24*3600):
+CACHE_TTL_SECONDS = 7 * 24 * 3600
+CACHE_PATH = "./data/pro_players.json"
+
+def ensure_data_fresh():
+    """
+    Ensure local pro player cache is available and fresh.
+
+    If ./data/pro_players.json does not exist, or if it is older than 7 days,
+    fetch fresh data from the OpenDota API and update the local file.
+    
+    Args:
+        None
+
+    Returns:
+        None
+    """
+    if os.path.exists(CACHE_PATH):
+        file_stats = os.stat(CACHE_PATH)
+        current_time = time.time()
+        file_modified_time = file_stats.st_mtime
+        if current_time - file_modified_time > CACHE_TTL_SECONDS:
             fetch_pro_players()
     else:
         fetch_pro_players()
@@ -27,7 +42,7 @@ def fetch_pro_players():
         p_team_name = player.get('team_name')
         simplify_pro_player = dict(zip(['avatar','steamid','profileurl', 'personaname','name','team_name'],[p_avatar,p_steamid,p_profileurl,p_personaname,p_name,p_team_name]))
         simplify_list.append(simplify_pro_player)
-    with open('./data/pro_players.json','w', encoding="utf-8") as f:
+    with open(CACHE_PATH,'w', encoding="utf-8") as f:
         json.dump(simplify_list, f)
     return simplify_list
 
