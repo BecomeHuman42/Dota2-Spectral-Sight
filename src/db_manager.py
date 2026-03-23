@@ -7,27 +7,42 @@ import datetime
 CACHE_TTL_SECONDS = 7 * 24 * 3600
 CACHE_PATH = "./data/pro_players.json"
 
-def ensure_data_fresh():
+def get_pro_players_cache():
     """
-    Ensure local pro player cache is available and fresh.
+    Return pro-player mapping from local cache, refreshing when needed.
 
-    If ./data/pro_players.json does not exist, or if it is older than 7 days,
-    use fetch_pro_players() to fetch fresh data.
+    Workflow:
+        1. If cache file does not exist, fetch and cache fresh data.
+        2. If cache file is older than 7 days, refresh it.
+        3. Otherwise, read and return the cached mapping.
     
     Args:
         None.
 
     Returns:
-        None.
+        dict[str, dict]: Simplified pro player mapping keyed by steamid.
+        Example:
+            {
+                "123456789": {
+                    "avatar": "string",
+                    "steamid": 123456789,
+                    "profileurl": "string",
+                    "personaname": "string",
+                    "name": "string",
+                    "team_name": "string",
+                }
+            }
     """
     if os.path.exists(CACHE_PATH):
         cache_file_stats = os.stat(CACHE_PATH)
         current_timestamp = time.time()
         cache_last_modified_timestamp = cache_file_stats.st_mtime
         if current_timestamp - cache_last_modified_timestamp > CACHE_TTL_SECONDS:
-            fetch_pro_players()
+            return fetch_pro_players()
+        else:
+            return get_cache()
     else:
-        fetch_pro_players()
+        return fetch_pro_players()
 
 def fetch_pro_players():
     """
@@ -37,18 +52,7 @@ def fetch_pro_players():
         None.
 
     Returns:
-        dict[int, dict]: Simplified pro player mapping.
-        Example:
-            {
-                123456789: {
-                    "avatar": "string",
-                    "steamid": 123456789,
-                    "profileurl": "string",
-                    "personaname": "string",
-                    "name": "string",
-                    "team_name": "string",
-                }
-            }
+        dict[str, dict]: Simplified pro player mapping keyed by steamid.
     """
     url = "https://api.opendota.com/api/proPlayers"
     response = requests.get(url, timeout=15)
@@ -63,7 +67,7 @@ def fetch_pro_players():
             "name": raw_player.get("name"),
             "team_name": raw_player.get("team_name"),
         }
-        simplified_pro_players_dict[raw_player.get("steamid")] = simplified_player_info
+        simplified_pro_players_dict[str(raw_player.get("steamid"))] = simplified_player_info
 
     with open(CACHE_PATH, "w", encoding="utf-8") as cache_file:
         json.dump(simplified_pro_players_dict, cache_file)
@@ -85,9 +89,15 @@ def get_cache_last_modified_datetime():
         cache_last_modified_timestamp = cache_file_stats.st_mtime
         last_modified_dt = datetime.datetime.fromtimestamp(cache_last_modified_timestamp)
         return last_modified_dt
+    
+def get_cache():
+    """Load pro-player mapping from local cache file."""
+    with open(CACHE_PATH, "r", encoding="utf-8") as cache_file:
+        pro_dict = json.load(cache_file)
+    return pro_dict
 
 def main():
-    fetch_pro_players()
+    get_pro_players_cache()
     time = get_cache_last_modified_datetime()
     print(f'Current date of data: {time}')
     

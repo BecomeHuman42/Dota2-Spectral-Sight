@@ -1,6 +1,6 @@
 import os
 from api_client import fetch_player_profile, get_player_steam_id, fetch_friend_list
-from db_manager import fetch_pro_players, ensure_data_fresh
+from db_manager import get_pro_players_cache
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,7 +13,7 @@ def match_pro_player(target_id = None):
     Workflow:
         1. Fetch target player's profile and SteamID.
         2. Fetch the target player's friend list from Steam Web API.
-        3. Ensure pro-player cache is fresh, then load pro-player mapping.
+        3. Load pro-player mapping from cache (refresh automatically if stale).
         4. Keep only friends whose ``steamid`` exists in the pro-player mapping.
 
     Args:
@@ -29,12 +29,14 @@ def match_pro_player(target_id = None):
     player_steam_id = get_player_steam_id(player_profile)
     friend_list = fetch_friend_list(player_steam_id)
 
-    ensure_data_fresh()
-    pro_dict = fetch_pro_players()
+    pro_dict = get_pro_players_cache()
+
+    if not friend_list or not pro_dict:
+        return []
 
     pro_friend_list = []
     for friend in friend_list:
-        friend_id = friend.get('steamid')
+        friend_id = str(friend.get('steamid'))
         if friend_id in pro_dict:
             pro_friend_list.append(pro_dict.get(friend_id))
     
